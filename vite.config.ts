@@ -17,7 +17,7 @@ function figmaAssetResolver() {
 
 export default defineConfig({
   // 🔥 IMPORTANTE para GitHub Pages (troque pelo nome do seu repo)
-  base: '/restaurante-frontend/',
+  base: '',
 
   plugins: [
     figmaAssetResolver(),
