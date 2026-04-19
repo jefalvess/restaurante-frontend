@@ -11,55 +11,60 @@ import { Products } from '../pages/Products';
 import { Categories } from '../pages/Categories';
 import { Reports } from '../pages/Reports';
 
-export const router = createBrowserRouter([
+export const router = createBrowserRouter(
+  [
+    {
+      path: '/login',
+      element: <Login />,
+    },
+    {
+      path: '/',
+      element: (
+        <ProtectedRoute>
+          <Layout />
+        </ProtectedRoute>
+      ),
+      children: [
+        {
+          index: true,
+          element: <OrdersList />,
+        },
+        {
+          path: 'pedidos',
+          element: <OrdersList />,
+        },
+        {
+          path: 'pedidos/novo',
+          element: <NewOrder />,
+        },
+        {
+          path: 'pedidos/:id',
+          element: <OrderDetail />,
+        },
+        {
+          path: 'pedidos/:id/checkout',
+          element: <Checkout />,
+        },
+        {
+          path: 'pedidos/:id/confirmacao',
+          element: <Confirmation />,
+        },
+        {
+          path: 'produtos',
+          element: <Products />,
+        },
+        {
+          path: 'categorias',
+          element: <Categories />,
+        },
+        {
+          path: 'relatorios',
+          element: <Reports />,
+        },
+      ],
+    },
+  ],
   {
-    path: '/login',
-    element: <Login />,
+    basename: import.meta.env.BASE_URL,
   },
-  {
-    path: '/',
-    element: (
-      <ProtectedRoute>
-        <Layout />
-      </ProtectedRoute>
-    ),
-    children: [
-      {
-        index: true,
-        element: <OrdersList />,
-      },
-      {
-        path: "pedidos",
-        element: <OrdersList />,
-      },
-      {
-        path: 'pedidos/novo',
-        element: <NewOrder />,
-      },
-      {
-        path: 'pedidos/:id',
-        element: <OrderDetail />,
-      },
-      {
-        path: 'pedidos/:id/checkout',
-        element: <Checkout />,
-      },
-      {
-        path: 'pedidos/:id/confirmacao',
-        element: <Confirmation />,
-      },
-      {
-        path: 'produtos',
-        element: <Products />,
-      },
-      {
-        path: 'categorias',
-        element: <Categories />,
-      },
-      {
-        path: 'relatorios',
-        element: <Reports />,
-      },
-    ],
-  },
-]);
+);
