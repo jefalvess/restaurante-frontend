@@ -4,8 +4,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { Utensils } from 'lucide-react';
 
 export function Login() {
-  const [userName, setUserName] = useState('');
-  const [password, setPassword] = useState('');
+  const [userName, setUserName] = useState('jeferson');
+  const [password, setPassword] = useState('123456');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
