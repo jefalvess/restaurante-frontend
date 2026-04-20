@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Utensils } from 'lucide-react';
 
 export function Login() {
-  const [email, setEmail] = useState('');
+  const [userName, setUserName] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -17,7 +17,7 @@ export function Login() {
     setLoading(true);
 
     try {
-      await login(email, password);
+      await login(userName, password);
       navigate('/');
     } catch (err) {
       setError('Credenciais inválidas');
@@ -39,16 +39,16 @@ export function Login() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-              Email ou Usuário
+            <label htmlFor="userName" className="block text-sm font-medium text-gray-700 mb-2">
+              UserName
             </label>
             <input
-              id="email"
+              id="userName"
               type="text"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={userName}
+              onChange={(e) => setUserName(e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-              placeholder="Digite seu email"
+              placeholder="Digite seu userName"
               required
             />
           </div>
@@ -84,7 +84,7 @@ export function Login() {
         </form>
 
         <div className="mt-6 text-center text-sm text-gray-500">
-          <p>Use qualquer email e senha para testar</p>
+          <p>Use qualquer userName e senha para testar</p>
         </div>
       </div>
     </div>

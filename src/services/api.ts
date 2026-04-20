@@ -10,7 +10,6 @@ import type {
   OrderType,
   OrderStatus,
   PaymentMethod,
-  CashMovement,
 } from '../types';
 
 // Mock data storage
@@ -122,6 +121,52 @@ let mockOrders: Order[] = [
   },
 ];
 
+const API_BASE_URL = import.meta.env.PROD
+  ? 'https://restaurante-frontend-back.vercel.app'
+  : 'http://localhost:3000';
+
+const AUTH_TOKEN_COOKIE_NAME = 'auth_token';
+const AUTH_TOKEN_MAX_AGE_SECONDS = 60 * 60 * 24 * 400;
+
+const setAuthTokenCookie = (token: string) => {
+  if (typeof document === 'undefined') return;
+
+  const secureFlag =
+    typeof window !== 'undefined' && window.location.protocol === 'https:' ? '; Secure' : '';
+
+  document.cookie = `${AUTH_TOKEN_COOKIE_NAME}=${encodeURIComponent(token)}; Max-Age=${AUTH_TOKEN_MAX_AGE_SECONDS}; Path=/; SameSite=Lax${secureFlag}`;
+};
+
+const clearAuthTokenCookie = () => {
+  if (typeof document === 'undefined') return;
+
+  const secureFlag =
+    typeof window !== 'undefined' && window.location.protocol === 'https:' ? '; Secure' : '';
+
+  document.cookie = `${AUTH_TOKEN_COOKIE_NAME}=; Max-Age=0; Path=/; SameSite=Lax${secureFlag}`;
+};
+
+const getAuthTokenFromCookie = (): string | null => {
+  if (typeof document === 'undefined') return null;
+
+  const cookie = document.cookie
+    .split('; ')
+    .find((entry) => entry.startsWith(`${AUTH_TOKEN_COOKIE_NAME}=`));
+
+  if (!cookie) return null;
+
+  return decodeURIComponent(cookie.split('=').slice(1).join('='));
+};
+
+const buildApiHeaders = (includeAuth: boolean = true): HeadersInit => {
+  const token = getAuthTokenFromCookie();
+
+  return {
+    'Content-Type': 'application/json',
+    ...(includeAuth && token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+};
+
 let currentUser: User | null = null;
 
 // Simulated API delay
@@ -129,23 +174,46 @@ const delay = (ms: number = 300) => new Promise((resolve) => setTimeout(resolve,
 
 // Auth API
 export const authApi = {
-  login: async (email: string, password: string): Promise<User> => {
-    await delay();
-    if (email && password) {
-      currentUser = {
-        id: '1',
-        email,
-        name: 'Atendente',
-        role: 'staff',
-      };
-      return currentUser;
+  login: async (userName: string, password: string): Promise<User> => {
+    const response = await fetch(`${API_BASE_URL}/login`, {
+      method: 'POST',
+      headers: buildApiHeaders(),
+      body: JSON.stringify({ userName, password }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Credenciais inválidas');
     }
-    throw new Error('Credenciais inválidas');
+
+    const data = (await response.json()) as {
+      token?: string;
+      user?: Partial<User>;
+      id?: string | number;
+      userName?: string;
+      name?: string;
+      role?: string;
+    };
+
+    const payloadUser = data.user ?? data;
+
+    currentUser = {
+      id: String(payloadUser.id ?? '1'),
+      userName: payloadUser.userName ?? userName,
+      name: payloadUser.name ?? 'Usuário',
+      role: payloadUser.role ?? 'staff',
+    };
+
+    if (data.token) {
+      setAuthTokenCookie(data.token);
+    }
+
+    return currentUser;
   },
 
   logout: async (): Promise<void> => {
     await delay();
     currentUser = null;
+    clearAuthTokenCookie();
   },
 
   getCurrentUser: async (): Promise<User | null> => {
@@ -186,41 +254,6 @@ export const categoriesApi = {
   delete: async (id: string): Promise<void> => {
     await delay();
     mockCategories = mockCategories.filter((c) => c.id !== id);
-  },
-};
-
-// Ingredients API
-export const ingredientsApi = {
-  getAll: async (): Promise<Ingredient[]> => {
-    await delay();
-    return mockIngredients;
-  },
-
-  getById: async (id: string): Promise<Ingredient> => {
-    await delay();
-    const ingredient = mockIngredients.find((i) => i.id === id);
-    if (!ingredient) throw new Error('Ingrediente não encontrado');
-    return ingredient;
-  },
-
-  create: async (data: Omit<Ingredient, 'id'>): Promise<Ingredient> => {
-    await delay();
-    const newIngredient = { ...data, id: Date.now().toString() };
-    mockIngredients.push(newIngredient);
-    return newIngredient;
-  },
-
-  update: async (id: string, data: Partial<Ingredient>): Promise<Ingredient> => {
-    await delay();
-    const index = mockIngredients.findIndex((i) => i.id === id);
-    if (index === -1) throw new Error('Ingrediente não encontrado');
-    mockIngredients[index] = { ...mockIngredients[index], ...data };
-    return mockIngredients[index];
-  },
-
-  delete: async (id: string): Promise<void> => {
-    await delay();
-    mockIngredients = mockIngredients.filter((i) => i.id !== id);
   },
 };
 

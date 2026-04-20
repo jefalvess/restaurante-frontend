@@ -5,7 +5,7 @@ import type { User } from '../types';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (userName: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -17,13 +17,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     authApi
-      .getCurrentUser()
+      .login("", "") // Try to get current user without credentials
       .then(setUser)
       .finally(() => setLoading(false));
   }, []);
 
-  const login = async (email: string, password: string) => {
-    const user = await authApi.login(email, password);
+  const login = async (userName: string, password: string) => {
+    const user = await authApi.login(userName, password);
     setUser(user);
   };
 
