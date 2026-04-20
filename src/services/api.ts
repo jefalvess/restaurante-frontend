@@ -646,10 +646,6 @@ export const reportsApi = {
           method: 'GET',
           headers: buildApiHeaders(),
         }),
-        fetch(`${API_BASE_URL}/reports/low-stock`, {
-          method: 'GET',
-          headers: buildApiHeaders(),
-        }),
         fetch(`${API_BASE_URL}/reports/orders-by-type?${query}`, {
           method: 'GET',
           headers: buildApiHeaders(),
