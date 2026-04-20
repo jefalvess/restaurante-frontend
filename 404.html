@@ -5,19 +5,31 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Restaurante</title>
   <script>
-    // Save the path that caused the 404 before redirecting
+    // GitHub Pages 404 handler for SPA routing
+    // Captures the original path from the URL and redirects to index.html
+    // The React Router will then use the stored path to navigate
+
     const basePath = '/restaurante-frontend';
     const fullPath = window.location.pathname + window.location.search + window.location.hash;
+    
+    // Extract the relative path from the full URL
     const relativePath = fullPath.startsWith(basePath) 
       ? fullPath.slice(basePath.length) 
       : fullPath;
     
-    // Store the original path so index.html can navigate to it
-    sessionStorage.setItem('redirectPath', relativePath || '/');
+    // Store the original path so React Router can navigate to it
+    // This prevents the user from seeing the home page
+    if (relativePath && relativePath !== '/') {
+      sessionStorage.setItem('redirectPath', relativePath);
+    }
+    
+    // Redirect to the app's root (which will trigger the React Router redirect)
+    window.location.replace(basePath + '/');
   </script>
   <meta http-equiv="refresh" content="0;url=/restaurante-frontend/" />
 </head>
 <body>
-  Redirecionando...
+  <!-- Fallback message if JavaScript is disabled -->
+  <p>Redirecionando para a aplicação...</p>
 </body>
 </html>
