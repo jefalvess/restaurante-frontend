@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { createBrowserRouter, Outlet, useNavigate } from 'react-router';
+import { useEffect, useState } from 'react';
+import { createBrowserRouter, Outlet, useNavigate, useLocation } from 'react-router';
 import { ProtectedRoute } from '../components/ProtectedRoute';
 import { Layout } from '../components/Layout';
 import { Login } from '../pages/Login';
@@ -15,15 +15,23 @@ import { Reports } from '../pages/Reports';
 // Root layout that handles GitHub Pages 404 redirects
 function RootLayout() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [hasHandledRedirect, setHasHandledRedirect] = useState(false);
 
   useEffect(() => {
-    // Handle GitHub Pages 404 redirect for SPA routing
-    const redirectPath = sessionStorage.getItem('redirectPath');
-    if (redirectPath && redirectPath !== '/') {
-      sessionStorage.removeItem('redirectPath');
-      navigate(redirectPath, { replace: true });
+    // Only check redirect on root path (/login is not root)
+    if (location.pathname === '/login') return;
+    
+    if (!hasHandledRedirect) {
+      const redirectPath = sessionStorage.getItem('redirectPath');
+      if (redirectPath && redirectPath !== '/') {
+        sessionStorage.removeItem('redirectPath');
+        // Redirect immediately to the original path
+        navigate(redirectPath, { replace: true });
+      }
+      setHasHandledRedirect(true);
     }
-  }, [navigate]);
+  }, [navigate, location.pathname, hasHandledRedirect]);
 
   return <Outlet />;
 }
