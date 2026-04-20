@@ -1,4 +1,5 @@
-import { createBrowserRouter } from 'react-router';
+import { useEffect } from 'react';
+import { createBrowserRouter, Outlet, useNavigate } from 'react-router';
 import { ProtectedRoute } from '../components/ProtectedRoute';
 import { Layout } from '../components/Layout';
 import { Login } from '../pages/Login';
@@ -11,55 +12,76 @@ import { Products } from '../pages/Products';
 import { Categories } from '../pages/Categories';
 import { Reports } from '../pages/Reports';
 
+// Root layout that handles GitHub Pages 404 redirects
+function RootLayout() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Handle GitHub Pages 404 redirect for SPA routing
+    const redirectPath = sessionStorage.getItem('redirectPath');
+    if (redirectPath && redirectPath !== '/') {
+      sessionStorage.removeItem('redirectPath');
+      navigate(redirectPath, { replace: true });
+    }
+  }, [navigate]);
+
+  return <Outlet />;
+}
+
 export const router = createBrowserRouter(
   [
     {
-      path: '/login',
-      element: <Login />,
-    },
-    {
-      path: '/',
-      element: (
-        <ProtectedRoute>
-          <Layout />
-        </ProtectedRoute>
-      ),
+      element: <RootLayout />,
       children: [
         {
-          index: true,
-          element: <OrdersList />,
+          path: '/login',
+          element: <Login />,
         },
         {
-          path: 'pedidos',
-          element: <OrdersList />,
-        },
-        {
-          path: 'pedidos/novo',
-          element: <NewOrder />,
-        },
-        {
-          path: 'pedidos/:_id',
-          element: <OrderDetail />,
-        },
-        {
-          path: 'pedidos/:_id/checkout',
-          element: <Checkout />,
-        },
-        {
-          path: 'pedidos/:_id/confirmacao',
-          element: <Confirmation />,
-        },
-        {
-          path: 'produtos',
-          element: <Products />,
-        },
-        {
-          path: 'categorias',
-          element: <Categories />,
-        },
-        {
-          path: 'relatorios',
-          element: <Reports />,
+          path: '/',
+          element: (
+            <ProtectedRoute>
+              <Layout />
+            </ProtectedRoute>
+          ),
+          children: [
+            {
+              index: true,
+              element: <OrdersList />,
+            },
+            {
+              path: 'pedidos',
+              element: <OrdersList />,
+            },
+            {
+              path: 'pedidos/novo',
+              element: <NewOrder />,
+            },
+            {
+              path: 'pedidos/:_id',
+              element: <OrderDetail />,
+            },
+            {
+              path: 'pedidos/:_id/checkout',
+              element: <Checkout />,
+            },
+            {
+              path: 'pedidos/:_id/confirmacao',
+              element: <Confirmation />,
+            },
+            {
+              path: 'produtos',
+              element: <Products />,
+            },
+            {
+              path: 'categorias',
+              element: <Categories />,
+            },
+            {
+              path: 'relatorios',
+              element: <Reports />,
+            },
+          ],
         },
       ],
     },

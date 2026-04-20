@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Restaurante</title>
+  <script>
+    // Save the path that caused the 404 before redirecting
+    const basePath = '/restaurante-frontend';
+    const fullPath = window.location.pathname + window.location.search + window.location.hash;
+    const relativePath = fullPath.startsWith(basePath) 
+      ? fullPath.slice(basePath.length) 
+      : fullPath;
+    
+    // Store the original path so index.html can navigate to it
+    sessionStorage.setItem('redirectPath', relativePath || '/');
+  </script>
+  <meta http-equiv="refresh" content="0;url=/restaurante-frontend/" />
+</head>
+<body>
+  Redirecionando...
+</body>
+</html>
