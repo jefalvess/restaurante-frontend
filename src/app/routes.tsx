@@ -20,6 +20,10 @@ function RootLayout() {
   const [hasHandledRedirect, setHasHandledRedirect] = useState(false);
 
   useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [location.pathname, location.search]);
+
+  useEffect(() => {
     // Only check redirect on root path (/login is not root)
     if (location.pathname === '/login') return;
     
