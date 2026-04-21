@@ -7,6 +7,7 @@ import {
   XCircle,
   Plus,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { ordersApi, productsApi, categoriesApi } from '../../services/api';
 import { PrintTicket } from '../../components/PrintTicket';
 import type { Order, Product, Category, OrderItem, PaymentMethod } from '../../types';
@@ -54,7 +55,7 @@ export function OrderDetail() {
       setProducts(productsData.filter((p) => p.active));
       setCategories(categoriesData);
     } catch (error) {
-      alert('Erro ao carregar pedido');
+      toast.error('Erro ao carregar pedido');
       navigate('/pedidos');
     } finally {
       setLoading(false);
@@ -118,7 +119,7 @@ export function OrderDetail() {
         setTimeout(() => setItemsToPrint([]), 1000);
       }, 200);
     } catch (error) {
-      alert('Erro ao adicionar produtos');
+      toast.error('Erro ao adicionar produtos');
     }
   };
 
@@ -128,7 +129,7 @@ export function OrderDetail() {
       const updatedOrder = await ordersApi.removeItem(order._id, itemId);
       setOrder(updatedOrder);
     } catch (error) {
-      alert('Erro ao remover item');
+      toast.error('Erro ao remover item');
     }
   };
 
@@ -148,7 +149,7 @@ export function OrderDetail() {
         }, 500);
       }, 200);
     } catch (error) {
-      alert('Erro ao fechar pedido');
+      toast.error('Erro ao fechar pedido');
     } finally {
       setPaymentLoading(false);
     }
@@ -162,7 +163,7 @@ export function OrderDetail() {
       await ordersApi.cancel(order._id);
       navigate('/pedidos');
     } catch (error) {
-      alert('Erro ao cancelar pedido');
+      toast.error('Erro ao cancelar pedido');
     }
   };
 
@@ -173,7 +174,7 @@ export function OrderDetail() {
       const updatedOrder = await ordersApi.update(order._id, { notes: newNotes });
       setOrder(updatedOrder);
     } catch (error) {
-      alert('Erro ao atualizar observações');
+      toast.error('Erro ao atualizar observações');
       setNotes(order.notes || '');
     }
   };

@@ -6,15 +6,50 @@ import { TrendingUp, DollarSign, ShoppingBag, XCircle } from 'lucide-react';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
+const PERIOD_OPTIONS = [
+  { label: '24h', days: 1 },
+  { label: '2 dias', days: 2 },
+  { label: '7 dias', days: 7 },
+  { label: '30 dias', days: 30 },
+];
+
+const toDateTimeLabel = (date: Date) => {
+  const day = date.toLocaleDateString('pt-BR');
+  const time = date.toLocaleTimeString('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  return `${day} ${time}`;
+};
+
+const getPeriodRange = (days: number) => {
+  const end = new Date();
+  const start = new Date(end.getTime() - days * 24 * 60 * 60 * 1000);
+
+  return {
+    startDate: start.toISOString(),
+    endDate: end.toISOString(),
+    startLabel: toDateTimeLabel(start),
+    endLabel: toDateTimeLabel(end),
+  };
+};
+
 export function Reports() {
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [startDate] = useState(new Date().toISOString().split('T')[0]);
-  const [endDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedPeriodDays, setSelectedPeriodDays] = useState(7);
+  const [{ startDate, endDate, startLabel, endLabel }, setDateRange] = useState(() =>
+    getPeriodRange(7)
+  );
 
   useEffect(() => {
     loadReport();
   }, [startDate, endDate]);
+
+  useEffect(() => {
+    setDateRange(getPeriodRange(selectedPeriodDays));
+  }, [selectedPeriodDays]);
 
   const loadReport = async () => {
     setLoading(true);
@@ -54,6 +89,31 @@ export function Reports() {
       <div className="mb-6">
         <h1 className="text-2xl lg:text-3xl font-semibold mb-2">Relatórios</h1>
         <p className="text-gray-600">Análise de vendas e desempenho</p>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-sm p-4 lg:p-6 mb-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-wrap gap-2">
+            {PERIOD_OPTIONS.map((option) => (
+              <button
+                key={option.days}
+                onClick={() => setSelectedPeriodDays(option.days)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                  selectedPeriodDays === option.days
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="text-sm text-gray-600">
+            Período: <span className="font-medium">{startLabel}</span> até{' '}
+            <span className="font-medium">{endLabel}</span>
+          </div>
+        </div>
       </div>
 
       {/* Summary Cards */}

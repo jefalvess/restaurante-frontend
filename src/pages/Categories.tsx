@@ -1,5 +1,6 @@
 import { useEffect, useState, FormEvent } from 'react';
 import { Plus, Edit, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { categoriesApi } from '../services/api';
 import type { Category } from '../types';
 
@@ -35,7 +36,7 @@ export function Categories() {
       await loadCategories();
       handleCloseModal();
     } catch (error) {
-      alert('Erro ao salvar categoria');
+      toast.error('Erro ao salvar categoria');
     }
   };
 
@@ -51,7 +52,7 @@ export function Categories() {
       await categoriesApi.delete(_id);
       await loadCategories();
     } catch (error) {
-      alert('Erro ao excluir categoria');
+      toast.error('Erro ao excluir categoria');
     }
   };
 

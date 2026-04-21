@@ -1,5 +1,6 @@
 import { useEffect, useState, FormEvent } from 'react';
 import { Plus, Edit, Trash2, Search } from 'lucide-react';
+import { toast } from 'sonner';
 import { productsApi, categoriesApi } from '../services/api';
 import type { Product, Category } from '../types';
 
@@ -53,7 +54,7 @@ export function Products() {
       await loadData();
       handleCloseModal();
     } catch (error) {
-      alert('Erro ao salvar produto');
+      toast.error('Erro ao salvar produto');
     }
   };
 
@@ -75,7 +76,7 @@ export function Products() {
       await productsApi.delete(_id);
       await loadData();
     } catch (error) {
-      alert('Erro ao excluir produto');
+      toast.error('Erro ao excluir produto');
     }
   };
 

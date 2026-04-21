@@ -1,6 +1,7 @@
 import { useEffect, useState, FormEvent } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { ArrowLeft, CreditCard, Banknote, Smartphone, CheckCircle } from 'lucide-react';
+import { toast } from 'sonner';
 import { ordersApi } from '../../services/api';
 import type { Order, PaymentMethod } from '../../types';
 
@@ -29,7 +30,7 @@ export function Checkout() {
       const data = await ordersApi.getById(_id!);
       setOrder(data);
     } catch (error) {
-      alert('Erro ao carregar pedido');
+      toast.error('Erro ao carregar pedido');
       navigate('/pedidos');
     } finally {
       setLoading(false);
@@ -45,7 +46,7 @@ export function Checkout() {
       await ordersApi.checkout(order._id, paymentMethod, discount);
       navigate(`/pedidos/${order._id}/confirmacao`);
     } catch (error) {
-      alert('Erro ao finalizar pagamento');
+      toast.error('Erro ao finalizar pagamento');
     } finally {
       setProcessing(false);
     }

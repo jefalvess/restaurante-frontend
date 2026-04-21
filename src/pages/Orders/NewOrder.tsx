@@ -1,6 +1,7 @@
 import { useState, FormEvent, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { ArrowLeft, Trash2, Search, X, Mic, Square } from 'lucide-react';
+import { toast } from 'sonner';
 import { ordersApi, productsApi, categoriesApi } from '../../services/api';
 import { audioProcessingApi } from '../../services/audioProcessing';
 import { useAudioRecorder } from '../../hooks/useAudioRecorder';
@@ -41,7 +42,7 @@ export function NewOrder() {
       setProducts(productsData.filter((p) => p.active));
       setCategories(categoriesData);
     } catch (error) {
-      alert('Erro ao carregar produtos');
+      toast.error('Erro ao carregar produtos');
     } finally {
       setLoadingProducts(false);
     }
@@ -120,14 +121,16 @@ export function NewOrder() {
         ].filter(Boolean);
 
         // Feedback visual
-        alert(
-          `✅ ${matchedItems.length} produto(s) adicionado(s)!${filledFields.length ? `\n\nCampos preenchidos: ${filledFields.join(', ')}` : ''}\n\n${matchedItems.map((i) => `${i.quantity}x ${i.productName}`).join('\n')}`
-        );
+        toast.success(`${matchedItems.length} produto(s) adicionado(s)!`, {
+          description: `${filledFields.length ? `Campos preenchidos: ${filledFields.join(', ')}\n\n` : ''}${matchedItems.map((i) => `${i.quantity}x ${i.productName}`).join('\n')}`,
+        });
       }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Erro desconhecido';
       setAudioError(errorMsg);
-      alert(`❌ ${errorMsg}`);
+      toast.error('Erro ao processar áudio', {
+        description: errorMsg,
+      });
     } finally {
       setIsProcessingAudio(false);
     }
@@ -162,19 +165,19 @@ export function NewOrder() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (items.length === 0) {
-      alert('Adicione pelo menos um produto');
+      toast.error('Adicione pelo menos um produto');
       return;
     }
     if (!formData.customerName) {
-      alert('Digite o nome do cliente');
+      toast.error('Digite o nome do cliente');
       return;
     }
     if (formData.type === 'delivery' && !formData.customerPhone) {
-      alert('Digite o telefone para delivery');
+      toast.error('Digite o telefone para delivery');
       return;
     }
     if (formData.type === 'delivery' && !formData.customerAddress) {
-      alert('Digite o endereço de entrega');
+      toast.error('Digite o endereço de entrega');
       return;
     }
 
@@ -194,7 +197,7 @@ export function NewOrder() {
 
       navigate(`/pedidos/${order._id}`);
     } catch (error) {
-      alert('Erro ao criar pedido');
+      toast.error('Erro ao criar pedido');
     } finally {
       setLoading(false);
     }

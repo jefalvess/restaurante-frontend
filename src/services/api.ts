@@ -627,9 +627,21 @@ export const ordersApi = {
 // Reports API
 export const reportsApi = {
   getReport: async (startDate: string, endDate: string): Promise<ReportData> => {
+    const normalizePeriodDate = (value: string, boundary: 'start' | 'end') => {
+      const hasTime = value.includes('T');
+
+      if (hasTime) {
+        return new Date(value).toISOString();
+      }
+
+      return boundary === 'start'
+        ? new Date(`${value}T00:00:00.000Z`).toISOString()
+        : new Date(`${value}T23:59:59.999Z`).toISOString();
+    };
+
     const query = new URLSearchParams({
-      start: new Date(`${startDate}T00:00:00.000Z`).toISOString(),
-      end: new Date(`${endDate}T23:59:59.999Z`).toISOString(),
+      start: normalizePeriodDate(startDate, 'start'),
+      end: normalizePeriodDate(endDate, 'end'),
     }).toString();
 
     const [salesResponse, topProductsResponse, paymentsResponse, byTypeResponse] =
