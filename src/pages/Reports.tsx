@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import DOMPurify from 'dompurify';
 import { reportsApi } from '../services/api';
 import type { ReportData } from '../types';
 import { TrendingUp, DollarSign, ShoppingBag, XCircle, ShoppingCart } from 'lucide-react';
@@ -209,44 +210,14 @@ export function Reports() {
                 </div>
                 <h2 className="font-semibold text-lg">Sugestão de Compras</h2>
               </div>
-              
-              {/* Suggestion Content */}
-              <div className="prose prose-sm max-w-none">
-                <div className="text-gray-700 space-y-4 text-sm leading-relaxed">
-                  {suggestionsData.suggestion.split('\n\n').map((paragraph: string, idx: number) => {
-                    // Check if it's a markdown heading (starts with #, **, etc)
-                    if (paragraph.startsWith('**') && paragraph.endsWith('**')) {
-                      return (
-                        <h3 key={idx} className="font-semibold text-base mt-6 mb-3 text-gray-900">
-                          {paragraph.replace(/\*\*/g, '')}
-                        </h3>
-                      );
-                    }
-                    // Check if it's a list with bullets
-                    if (paragraph.includes('*   ')) {
-                      const items = paragraph.split('\n').filter((line: string) => line.trim().startsWith('*'));
-                      return (
-                        <ul key={idx} className="list-disc list-inside space-y-2 text-gray-700">
-                          {items.map((item: string, itemIdx: number) => (
-                            <li key={itemIdx} className="ml-2">
-                              {item.replace('*   ', '').replace(/\*\*/g, '')}
-                            </li>
-                          ))}
-                        </ul>
-                      );
-                    }
-                    // Regular paragraph
-                    if (paragraph.trim()) {
-                      return (
-                        <p key={idx} className="text-gray-700">
-                          {paragraph.trim().replace(/\*\*/g, '')}
-                        </p>
-                      );
-                    }
-                    return null;
-                  })}
-                </div>
-              </div>
+
+              {/* Backend returns preformatted HTML; sanitize before rendering to prevent XSS. */}
+              <div
+                className="prose prose-sm max-w-none text-gray-700 leading-relaxed"
+                dangerouslySetInnerHTML={{
+                  __html: DOMPurify.sanitize(String(suggestionsData.suggestion ?? '')),
+                }}
+              />
             </div>
           )}
         </div>
