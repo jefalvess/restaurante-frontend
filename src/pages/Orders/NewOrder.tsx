@@ -1,6 +1,6 @@
-import { useState, FormEvent, useEffect } from 'react';
+import { useState, FormEvent, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
-import { ArrowLeft, Trash2, Search, X, Mic, Square } from 'lucide-react';
+import { ArrowLeft, Trash2, Search, X, Mic } from 'lucide-react';
 import { toast } from 'sonner';
 import { ordersApi, productsApi, categoriesApi } from '../../services/api';
 import { audioProcessingApi } from '../../services/audioProcessing';
@@ -19,8 +19,8 @@ export function NewOrder() {
   const [items, setItems] = useState<(Omit<OrderItem, '_id'> & { key: string })[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [productNotes, setProductNotes] = useState('');
-  const [audioError, setAudioError] = useState<string | null>(null);
   const [isProcessingAudio, setIsProcessingAudio] = useState(false);
+  const isRecordingRef = useRef(false);
   const [createdOrderToPrint, setCreatedOrderToPrint] = useState<Order | null>(null);
   const [printCreatedOrder, setPrintCreatedOrder] = useState(false);
   const { isRecording, recordingTimeSeconds, startRecording, stopRecording } = useAudioRecorder();
@@ -51,91 +51,126 @@ export function NewOrder() {
     }
   };
 
-  const handleAudioCapture = async () => {
+  const playBeep = () => {
     try {
-      setAudioError(null);
+      type AudioCtxCtor = typeof AudioContext;
+      const Ctor: AudioCtxCtor =
+        window.AudioContext ||
+        (window as Window & { webkitAudioContext?: AudioCtxCtor }).webkitAudioContext!;
+      const ctx = new Ctor();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.12);
+    } catch {
+      // sem suporte — silencioso
+    }
+  };
 
-      if (!isRecording) {
-        // Iniciar gravação
-        await startRecording();
-      } else {
-        // Parar gravação e processar
-        setIsProcessingAudio(true);
-        const audioBlob = await stopRecording();
+  const processAudioBlob = async (audioBlob: Blob) => {
+    const result = await audioProcessingApi.processAudio(audioBlob);
 
-        if (!audioBlob) {
-          throw new Error('Falha ao capturar áudio');
-        }
+    const matchedItems = result.items.map((item) => {
+      const matchedById = item.productId
+        ? products.find((product) => product._id === item.productId)
+        : null;
 
-        // Enviar para o backend processar o audio com IA
-        const result = await audioProcessingApi.processAudio(audioBlob);
-
-        // Aproveitar productId do backend quando existir, com fallback local por nome
-        const matchedItems = result.items.map((item) => {
-          const matchedById = item.productId
-            ? products.find((product) => product._id === item.productId)
-            : null;
-
-          if (matchedById) {
-            return {
-              ...item,
-              productId: matchedById._id,
-              productName: matchedById.name,
-              unitPrice: matchedById.price,
-              total: item.quantity * matchedById.price,
-            };
-          }
-
-          const matchedProduct = products.find(
-            (p) =>
-              p.name.toLowerCase().includes(item.productName.toLowerCase()) ||
-              item.productName.toLowerCase().includes(p.name.toLowerCase())
-          );
-
-          if (matchedProduct) {
-            return {
-              ...item,
-              productId: matchedProduct._id,
-              unitPrice: matchedProduct.price,
-              total: item.quantity * matchedProduct.price,
-            };
-          }
-
-          // Se não encontrar, mantém com productId vazio (usuário terá que confirmar manualmente)
-          return item;
-        });
-
-        // Atualizar estado
-        setItems((prevItems) => [...prevItems, ...matchedItems]);
-
-        setFormData((prev) => ({
-          ...prev,
-          type: result.type || prev.type,
-          customerName: result.customerName || prev.customerName,
-          customerPhone: result.customerPhone || prev.customerPhone,
-          customerAddress: result.customerAddress || prev.customerAddress,
-        }));
-
-        const filledFields = [
-          result.type ? `tipo: ${result.type}` : null,
-          result.customerName ? `nome: ${result.customerName}` : null,
-          result.customerPhone ? `telefone: ${result.customerPhone}` : null,
-          result.customerAddress ? 'endereco preenchido' : null,
-        ].filter(Boolean);
-
-        // Feedback visual
-        toast.success(`${matchedItems.length} produto(s) adicionado(s)!`, {
-          description: `${filledFields.length ? `Campos preenchidos: ${filledFields.join(', ')}\n\n` : ''}${matchedItems.map((i) => `${i.quantity}x ${i.productName}`).join('\n')}`,
-        });
+      if (matchedById) {
+        return {
+          ...item,
+          productId: matchedById._id,
+          productName: matchedById.name,
+          unitPrice: matchedById.price,
+          total: item.quantity * matchedById.price,
+        };
       }
+
+      const matchedProduct = products.find(
+        (p) =>
+          p.name.toLowerCase().includes(item.productName.toLowerCase()) ||
+          item.productName.toLowerCase().includes(p.name.toLowerCase())
+      );
+
+      if (matchedProduct) {
+        return {
+          ...item,
+          productId: matchedProduct._id,
+          unitPrice: matchedProduct.price,
+          total: item.quantity * matchedProduct.price,
+        };
+      }
+
+      return item;
+    });
+
+    setItems((prevItems) => [...prevItems, ...matchedItems]);
+
+    setFormData((prev) => ({
+      ...prev,
+      type: result.type || prev.type,
+      customerName: result.customerName || prev.customerName,
+      customerPhone: result.customerPhone || prev.customerPhone,
+      customerAddress: result.customerAddress || prev.customerAddress,
+    }));
+
+    const filledFields = [
+      result.type ? `tipo: ${result.type}` : null,
+      result.customerName ? `nome: ${result.customerName}` : null,
+      result.customerPhone ? `telefone: ${result.customerPhone}` : null,
+      result.customerAddress ? 'endereco preenchido' : null,
+    ].filter(Boolean);
+
+    toast.success(`${matchedItems.length} produto(s) adicionado(s)!`, {
+      description: `${
+        filledFields.length ? `Campos preenchidos: ${filledFields.join(', ')}\n\n` : ''
+      }${matchedItems.map((i) => `${i.quantity}x ${i.productName}`).join('\n')}`,
+    });
+  };
+
+  const handlePressStart = async (e: React.PointerEvent) => {
+    e.preventDefault();
+    if (isRecordingRef.current || isProcessingAudio || loadingProducts) return;
+
+    // Registra o listener ANTES de iniciar a gravação para não perder o pointerup
+    // caso a inicialização do microfone demore (ex: caixa de permissão).
+    let recordingStarted = false;
+
+    const onRelease = async () => {
+      document.removeEventListener('pointerup', onRelease);
+      document.removeEventListener('pointercancel', onRelease);
+      if (!recordingStarted && !isRecordingRef.current) return;
+      isRecordingRef.current = false;
+      setIsProcessingAudio(true);
+      try {
+        const audioBlob = await stopRecording();
+        if (!audioBlob) throw new Error('Falha ao capturar áudio');
+        await processAudioBlob(audioBlob);
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : 'Erro desconhecido';
+        toast.error('Erro ao processar áudio', { description: errorMsg });
+      } finally {
+        setIsProcessingAudio(false);
+      }
+    };
+
+    document.addEventListener('pointerup', onRelease);
+    document.addEventListener('pointercancel', onRelease);
+
+    playBeep();
+    try {
+      await startRecording();
+      recordingStarted = true;
+      isRecordingRef.current = true;
     } catch (error) {
+      document.removeEventListener('pointerup', onRelease);
+      document.removeEventListener('pointercancel', onRelease);
       const errorMsg = error instanceof Error ? error.message : 'Erro desconhecido';
-      setAudioError(errorMsg);
-      toast.error('Erro ao processar áudio', {
-        description: errorMsg,
-      });
-    } finally {
-      setIsProcessingAudio(false);
+      toast.error('Erro ao acessar microfone', { description: errorMsg });
     }
   };
 
@@ -238,7 +273,7 @@ export function NewOrder() {
   const total = subtotal + deliveryFee;
 
   return (
-    <div className="p-4 lg:p-8 max-w-7xl mx-auto">
+    <div className="p-4 lg:p-8 max-w-7xl mx-auto pb-28">
       {/* Header */}
       <div className="mb-6">
         <button
@@ -341,87 +376,6 @@ export function NewOrder() {
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-semibold text-lg">Selecione os Produtos</h2>
             </div>
-
-            <div
-              className={`mb-5 rounded-2xl border transition-all ${
-                isRecording
-                  ? 'border-red-200 bg-gradient-to-r from-red-50 to-orange-50 shadow-sm'
-                  : 'border-slate-200 bg-slate-50'
-              }`}
-            >
-              <div className="flex flex-col gap-4 p-4 md:flex-row md:items-center md:justify-between">
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`flex h-12 w-12 items-center justify-center rounded-full ${
-                      isRecording ? 'bg-red-600 text-white shadow-lg shadow-red-200' : 'bg-blue-600 text-white'
-                    }`}
-                  >
-                    {isRecording ? <Square size={18} /> : <Mic size={20} />}
-                  </div>
-
-                  <div>
-                    <p className={`text-sm font-semibold ${isRecording ? 'text-red-700' : 'text-slate-800'}`}>
-                      {isRecording ? 'Gravando pedido...' : 'Ditado inteligente do pedido'}
-                    </p>
-                    <p className="text-sm text-slate-500">
-                      {isRecording
-                        ? 'Fale nome, telefone, endereco, tipo e itens do pedido.'
-                        : 'Toque para gravar e preencher os campos automaticamente.'}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 md:min-w-[220px] md:justify-end">
-                  <div
-                    className={`flex min-w-[104px] items-center justify-center rounded-full px-4 py-2 font-mono text-lg font-semibold tracking-wide ${
-                      isRecording ? 'bg-white text-red-700' : 'bg-white text-slate-600'
-                    }`}
-                  >
-                    {isRecording && <span className="mr-2 h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse" />}
-                    {formatRecordingTime(recordingTimeSeconds)}
-                  </div>
-
-                  <button
-                    onClick={handleAudioCapture}
-                    disabled={isProcessingAudio || loadingProducts}
-                    className={`inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold transition ${
-                      isRecording
-                        ? 'bg-red-600 text-white hover:bg-red-700'
-                        : 'bg-slate-900 text-white hover:bg-slate-800'
-                    } disabled:cursor-not-allowed disabled:opacity-50`}
-                  >
-                    {isRecording ? (
-                      <>
-                        <Square size={16} />
-                        Finalizar
-                      </>
-                    ) : isProcessingAudio ? (
-                      <>
-                        <div className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                        Processando...
-                      </>
-                    ) : (
-                      <>
-                        <Mic size={16} />
-                        Gravar audio
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {isRecording && (
-                <div className="border-t border-red-100 px-4 py-3 text-sm text-red-700">
-                  O contador esta ativo. Quando terminar de falar, toque em finalizar para montar o pedido.
-                </div>
-              )}
-            </div>
-
-            {audioError && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                {audioError}
-              </div>
-            )}
 
             {/* Search */}
             {!loadingProducts && (
@@ -619,6 +573,52 @@ export function NewOrder() {
           <PrintTicket order={createdOrderToPrint} type="kitchen" />
         </div>
       )}
+
+      {/* Botão flutuante de gravação por voz */}
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2 select-none">
+        {/* Indicador de estado acima do botão */}
+        {(isRecording || isProcessingAudio) && (
+          <div className="flex items-center gap-2 bg-white rounded-2xl shadow-lg px-4 py-2 border border-gray-100">
+            {isProcessingAudio ? (
+              <>
+                <div className="h-3.5 w-3.5 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
+                <span className="text-sm font-medium text-gray-700">Processando...</span>
+              </>
+            ) : (
+              <>
+                <span className="h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse" />
+                <span className="font-mono text-sm font-semibold text-red-700">
+                  {formatRecordingTime(recordingTimeSeconds)}
+                </span>
+                <span className="text-xs text-gray-400">Solte para enviar</span>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Botão principal */}
+        <button
+          onPointerDown={handlePressStart}
+          disabled={isProcessingAudio || loadingProducts}
+          aria-label="Pressione e segure para gravar pedido por voz"
+          className={`flex h-16 w-16 items-center justify-center rounded-full shadow-2xl transition-all duration-150 ${
+            isRecording
+              ? 'bg-red-500 scale-110 ring-4 ring-red-300'
+              : 'bg-blue-600 hover:bg-blue-700 active:scale-95'
+          } disabled:opacity-50 disabled:cursor-not-allowed`}
+        >
+          {isProcessingAudio ? (
+            <div className="h-6 w-6 rounded-full border-2 border-white border-t-transparent animate-spin" />
+          ) : (
+            <Mic size={28} className="text-white" />
+          )}
+        </button>
+
+        {/* Dica inicial */}
+        {!isRecording && !isProcessingAudio && (
+          <span className="text-xs text-gray-400 text-center w-16">Segure p/ gravar</span>
+        )}
+      </div>
     </div>
   );
 }
