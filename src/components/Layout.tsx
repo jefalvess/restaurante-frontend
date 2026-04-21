@@ -2,16 +2,14 @@ import { Outlet, Link, useLocation } from 'react-router';
 import {
   ShoppingBag,
   Utensils,
-  Package,
   Tag,
-  Beaker,
   BarChart3,
   LogOut,
   Menu,
   X,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 const navigation = [
   { name: 'Pedidos', href: '/pedidos', icon: ShoppingBag },
@@ -24,6 +22,9 @@ export function Layout() {
   const { user, logout } = useAuth();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [dragOffset, setDragOffset] = useState(0);
+  const [isDraggingMenu, setIsDraggingMenu] = useState(false);
+  const touchStartXRef = useRef<number | null>(null);
 
   const visibleNavigation = navigation.filter((item) => {
     if (item.href === '/relatorios' && user?.role !== 'admin') {
@@ -35,6 +36,35 @@ export function Layout() {
 
   const handleLogout = async () => {
     await logout();
+  };
+
+  const handleMenuTouchStart = (e: React.TouchEvent<HTMLElement>) => {
+    if (!mobileMenuOpen) return;
+    touchStartXRef.current = e.touches[0]?.clientX ?? null;
+    setIsDraggingMenu(true);
+  };
+
+  const handleMenuTouchMove = (e: React.TouchEvent<HTMLElement>) => {
+    if (!mobileMenuOpen || touchStartXRef.current === null) return;
+
+    const currentX = e.touches[0]?.clientX ?? touchStartXRef.current;
+    const deltaX = currentX - touchStartXRef.current;
+
+    if (deltaX < 0) {
+      setDragOffset(Math.max(deltaX, -256));
+    }
+  };
+
+  const handleMenuTouchEnd = () => {
+    if (!mobileMenuOpen) return;
+
+    if (dragOffset <= -80) {
+      setMobileMenuOpen(false);
+    }
+
+    touchStartXRef.current = null;
+    setDragOffset(0);
+    setIsDraggingMenu(false);
   };
 
   return (
@@ -52,12 +82,16 @@ export function Layout() {
 
       {/* Sidebar */}
       <aside
+        onTouchStart={handleMenuTouchStart}
+        onTouchMove={handleMenuTouchMove}
+        onTouchEnd={handleMenuTouchEnd}
         className={`
         fixed top-0 left-0 z-40 h-screen w-64 bg-white border-r border-gray-200
-        transition-transform duration-300
+        ${isDraggingMenu ? 'transition-none' : 'transition-transform duration-300'}
         ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0
       `}
+        style={mobileMenuOpen && dragOffset !== 0 ? { transform: `translateX(${dragOffset}px)` } : undefined}
       >
         <div className="flex flex-col h-full">
           <div className="p-6 border-b border-gray-200">
