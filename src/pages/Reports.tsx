@@ -59,8 +59,10 @@ export function Reports() {
   }, [selectedPeriodDays]);
 
   useEffect(() => {
-    loadSuggestions();
-  }, [suggestionPeriodDays]);
+    if (activeTab === 'suggestions') {
+      loadSuggestions();
+    }
+  }, [activeTab, suggestionPeriodDays]);
 
   const loadSuggestions = async () => {
     setSuggestionLoading(true);
@@ -100,10 +102,20 @@ export function Reports() {
 
   if (!reportData) return null;
 
-  const paymentChartData = reportData.paymentMethods.map((pm) => ({
-    name: pm.method === 'dinheiro' ? 'Dinheiro' : pm.method === 'pix' ? 'PIX' : 'Cartão',
-    value: pm.total,
-  }));
+  const paymentLabelMap: Record<string, string> = {
+    dinheiro: 'Dinheiro',
+    pix: 'PIX',
+    cartao: 'Cartão',
+  };
+
+  const allowedPaymentMethods = new Set(['dinheiro', 'pix', 'cartao']);
+
+  const paymentChartData = reportData.paymentMethods
+    .filter((pm) => allowedPaymentMethods.has(pm.method))
+    .map((pm) => ({
+      name: paymentLabelMap[pm.method] ?? pm.method,
+      value: pm.total,
+    }));
 
   const topProductsChartData = reportData.topProducts.slice(0, 5).map((p) => ({
     name: p.name.length > 15 ? p.name.substring(0, 15) + '...' : p.name,
