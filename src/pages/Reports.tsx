@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { reportsApi } from '../services/api';
 import type { ReportData } from '../types';
-import { TrendingUp, DollarSign, ShoppingBag, XCircle } from 'lucide-react';
+import { TrendingUp, DollarSign, ShoppingBag, XCircle, ShoppingCart } from 'lucide-react';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
@@ -36,12 +36,19 @@ const getPeriodRange = (days: number) => {
 };
 
 export function Reports() {
+  const [activeTab, setActiveTab] = useState<'reports' | 'suggestions'>('reports');
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedPeriodDays, setSelectedPeriodDays] = useState(7);
   const [{ startDate, endDate, startLabel, endLabel }, setDateRange] = useState(() =>
     getPeriodRange(7)
   );
+
+  // Suggestions state
+  const [suggestionPeriodDays, setSuggestionPeriodDays] = useState(7);
+  const [suggestionsData, setSuggestionsData] = useState<any | null>(null);
+  const [suggestionLoading, setSuggestionLoading] = useState(false);
+  const [suggestionError, setSuggestionError] = useState<string | null>(null);
 
   useEffect(() => {
     loadReport();
@@ -50,6 +57,25 @@ export function Reports() {
   useEffect(() => {
     setDateRange(getPeriodRange(selectedPeriodDays));
   }, [selectedPeriodDays]);
+
+  useEffect(() => {
+    loadSuggestions();
+  }, [suggestionPeriodDays]);
+
+  const loadSuggestions = async () => {
+    setSuggestionLoading(true);
+    setSuggestionError(null);
+    setSuggestionsData(null);
+    const { startDate: s, endDate: e } = getPeriodRange(suggestionPeriodDays);
+    try {
+      const result = await reportsApi.getSuggestions(s, e);
+      setSuggestionsData(result);
+    } catch (err) {
+      setSuggestionError(err instanceof Error ? err.message : 'Erro ao buscar sugestões');
+    } finally {
+      setSuggestionLoading(false);
+    }
+  };
 
   const loadReport = async () => {
     setLoading(true);
@@ -91,7 +117,133 @@ export function Reports() {
         <p className="text-gray-600">Análise de vendas e desempenho</p>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm p-4 lg:p-6 mb-6">
+      {/* Tab navigation */}
+      <div className="flex gap-2 mb-6 border-b border-gray-200">
+        <button
+          onClick={() => setActiveTab('reports')}
+          className={`pb-3 px-4 text-sm font-medium border-b-2 transition ${
+            activeTab === 'reports'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Relatórios
+        </button>
+        <button
+          onClick={() => setActiveTab('suggestions')}
+          className={`pb-3 px-4 text-sm font-medium border-b-2 transition flex items-center gap-2 ${
+            activeTab === 'suggestions'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <ShoppingCart size={15} />
+          Sugestões de Compra
+        </button>
+      </div>
+
+      {/* Suggestions Tab */}
+      {activeTab === 'suggestions' && (
+        <div>
+          <div className="bg-white rounded-xl shadow-sm p-4 lg:p-6 mb-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <h2 className="font-semibold text-base mb-1">Período de análise</h2>
+                <p className="text-sm text-gray-500">Com base nas vendas do período selecionado</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {PERIOD_OPTIONS.map((option) => (
+                  <button
+                    key={option.days}
+                    onClick={() => setSuggestionPeriodDays(option.days)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                      suggestionPeriodDays === option.days
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {suggestionError && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm">
+              {suggestionError}
+            </div>
+          )}
+
+          {!suggestionsData && !suggestionLoading && !suggestionError && (
+            <div className="bg-white rounded-xl shadow-sm p-12 flex flex-col items-center justify-center gap-3 text-gray-400">
+              <ShoppingCart size={40} />
+              <p className="text-sm">Carregando sugestões de compra...</p>
+            </div>
+          )}
+
+          {suggestionLoading && (
+            <div className="bg-white rounded-xl shadow-sm p-12 flex flex-col items-center justify-center gap-4 text-gray-400">
+              <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+              <p className="text-sm">Analisando vendas e gerando sugestões...</p>
+            </div>
+          )}
+
+          {suggestionsData && !suggestionLoading && (
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="bg-green-100 w-10 h-10 rounded-lg flex items-center justify-center">
+                  <ShoppingCart className="text-green-600" size={20} />
+                </div>
+                <h2 className="font-semibold text-lg">Sugestão de Compras</h2>
+              </div>
+              
+              {/* Suggestion Content */}
+              <div className="prose prose-sm max-w-none">
+                <div className="text-gray-700 space-y-4 text-sm leading-relaxed">
+                  {suggestionsData.suggestion.split('\n\n').map((paragraph: string, idx: number) => {
+                    // Check if it's a markdown heading (starts with #, **, etc)
+                    if (paragraph.startsWith('**') && paragraph.endsWith('**')) {
+                      return (
+                        <h3 key={idx} className="font-semibold text-base mt-6 mb-3 text-gray-900">
+                          {paragraph.replace(/\*\*/g, '')}
+                        </h3>
+                      );
+                    }
+                    // Check if it's a list with bullets
+                    if (paragraph.includes('*   ')) {
+                      const items = paragraph.split('\n').filter((line: string) => line.trim().startsWith('*'));
+                      return (
+                        <ul key={idx} className="list-disc list-inside space-y-2 text-gray-700">
+                          {items.map((item: string, itemIdx: number) => (
+                            <li key={itemIdx} className="ml-2">
+                              {item.replace('*   ', '').replace(/\*\*/g, '')}
+                            </li>
+                          ))}
+                        </ul>
+                      );
+                    }
+                    // Regular paragraph
+                    if (paragraph.trim()) {
+                      return (
+                        <p key={idx} className="text-gray-700">
+                          {paragraph.trim().replace(/\*\*/g, '')}
+                        </p>
+                      );
+                    }
+                    return null;
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Reports Tab */}
+      {activeTab === 'reports' && (
+        <>
+        <div className="bg-white rounded-xl shadow-sm p-4 lg:p-6 mb-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap gap-2">
             {PERIOD_OPTIONS.map((option) => (
@@ -241,6 +393,8 @@ export function Reports() {
           )}
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }

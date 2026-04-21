@@ -747,4 +747,36 @@ export const reportsApi = {
       ordersByType: byTypeData,
     };
   },
+
+  getSuggestions: async (startDate: string, endDate: string) => {
+    const query = new URLSearchParams({
+      start: new Date(startDate).toISOString(),
+      end: new Date(endDate).toISOString(),
+    }).toString();
+
+    const response = await fetch(`${API_BASE_URL}/reports/purchase-suggestions?${query}`, {
+      method: 'GET',
+      headers: buildApiHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Erro ao buscar sugestões de compra');
+    }
+
+    interface SuggestionsResponse {
+      period: {
+        start: string;
+        end: string;
+      };
+      products: Array<{
+        productName: string;
+        description: string;
+        quantitySold: number;
+      }>;
+      suggestion: string;
+    }
+
+    const data = (await response.json()) as SuggestionsResponse;
+    return data;
+  },
 };
