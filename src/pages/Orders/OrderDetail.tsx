@@ -32,12 +32,18 @@ export function OrderDetail() {
   const [printFull, setPrintFull] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
-  const [deliveryFee, setDeliveryFee] = useState(0);
+  const [deliveryFeeInput, setDeliveryFeeInput] = useState('');
 
   const parseIntegerCurrency = (value: string) => {
     const parsed = Number.parseInt(value, 10);
     if (Number.isNaN(parsed) || parsed < 0) return 0;
     return parsed;
+  };
+
+  const sanitizeIntegerInput = (value: string) => {
+    const digitsOnly = value.replace(/\D/g, '');
+    if (!digitsOnly) return '';
+    return digitsOnly.replace(/^0+(?=\d)/, '');
   };
 
   useEffect(() => {
@@ -47,7 +53,7 @@ export function OrderDetail() {
   useEffect(() => {
     if (order) {
       setNotes(order.notes || '');
-      setDeliveryFee(0);
+      setDeliveryFeeInput('');
     }
   }, [order]);
 
@@ -210,6 +216,8 @@ export function OrderDetail() {
   }
 
   if (!order) return null;
+
+  const deliveryFee = parseIntegerCurrency(deliveryFeeInput);
 
   return (
     <div className="p-4 lg:p-8 max-w-7xl mx-auto">
@@ -564,11 +572,11 @@ export function OrderDetail() {
                 </label>
                 <input
                   id="modalDeliveryFee"
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={deliveryFee}
-                  onChange={(e) => setDeliveryFee(parseIntegerCurrency(e.target.value))}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={deliveryFeeInput}
+                  onChange={(e) => setDeliveryFeeInput(sanitizeIntegerInput(e.target.value))}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                 />
               </div>

@@ -18,13 +18,19 @@ export function Checkout() {
   const [loading, setLoading] = useState(true);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('dinheiro');
   const [discount, setDiscount] = useState(0);
-  const [deliveryFee, setDeliveryFee] = useState(0);
+  const [deliveryFeeInput, setDeliveryFeeInput] = useState('');
   const [processing, setProcessing] = useState(false);
 
   const parseIntegerCurrency = (value: string) => {
     const parsed = Number.parseInt(value, 10);
     if (Number.isNaN(parsed) || parsed < 0) return 0;
     return parsed;
+  };
+
+  const sanitizeIntegerInput = (value: string) => {
+    const digitsOnly = value.replace(/\D/g, '');
+    if (!digitsOnly) return '';
+    return digitsOnly.replace(/^0+(?=\d)/, '');
   };
 
   useEffect(() => {
@@ -36,7 +42,7 @@ export function Checkout() {
     try {
       const data = await ordersApi.getById(_id!);
       setOrder(data);
-      setDeliveryFee(0);
+      setDeliveryFeeInput('');
     } catch (error) {
       toast.error('Erro ao carregar pedido');
       navigate('/pedidos');
@@ -76,6 +82,7 @@ export function Checkout() {
   if (!order) return null;
 
   const isDelivery = order.type === 'delivery';
+  const deliveryFee = parseIntegerCurrency(deliveryFeeInput);
   const subtotal = order.subtotal;
   const appliedDeliveryFee = isDelivery ? deliveryFee : 0;
   const finalTotal = subtotal - discount + appliedDeliveryFee;
@@ -130,11 +137,11 @@ export function Checkout() {
             </label>
             <input
               id="deliveryFee"
-              type="number"
-              min="0"
-              step="1"
-              value={deliveryFee}
-              onChange={(e) => setDeliveryFee(parseIntegerCurrency(e.target.value))}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={deliveryFeeInput}
+              onChange={(e) => setDeliveryFeeInput(sanitizeIntegerInput(e.target.value))}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
               placeholder="0"
             />
